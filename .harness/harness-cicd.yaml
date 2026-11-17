@@ -1,0 +1,52 @@
+pipeline:
+  stages:
+    - steps:
+        - run:
+            script: echo "Initialize Pipeline"
+          name: Initialize Pipeline
+          id: Initialize_Pipeline
+        - name: Pipeline Configurations
+          run:
+            script: echo "Pull Pipeline configurations"
+          id: Pipeline_Configurations
+    - id: javaGradleBuildTestHostedLinuxStage_1
+      name: Java Gradle Build and Test on Harness Cloud (Linux)
+      clone:
+        enabled: true
+      cache:
+        enabled: true
+      build-intelligence:
+        enabled: true
+      steps:
+        - id: setupJava
+          name: Setup Java
+          template:
+            uses: setupJava@1.0.0
+        - id: setupGradle
+          name: Setup Gradle
+          template:
+            uses: setupGradle@1.0.0
+        - id: buildLinux
+          name: Build on Linux
+          run:
+            shell: bash
+            script: |-
+              ./gradlew build
+        - id: testLinux
+          name: Test on Linux
+          run-test:
+            shell: bash
+            script: |-
+              set -eu
+              ./gradlew test
+              ./gradlew jacocoTestReport || echo "JaCoCo is not configured; skipping coverage report generation."
+            intelligence:
+              disabled: true
+        - id: coverage
+          name: Upload Coverage
+          run:
+            shell: bash
+            script: |-
+              hcli cov upload
+            env:
+              CI_ENABLE_HCLI_FOR_TESTS: "true"
